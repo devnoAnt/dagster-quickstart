@@ -40,3 +40,27 @@ def hackernews_top_stories(config: HNStoriesConfig) -> MaterializeResult:
             "preview": MetadataValue.md(str(df[["title", "by", "url"]].to_markdown())),
         }
     )
+
+
+from dagster import asset
+from dagster_postgres import PostgresResource
+import pandas as pd
+
+@asset(required_resource_keys={"postgres"})
+def my_postgres_asset(context) -> pd.DataFrame:
+    # Use the PostgresResource to execute a query and fetch data
+    query = "SELECT * FROM evno.repositories"
+    with context.resources.postgres.get_connection() as conn:
+        return pd.read_sql(query, conn)
+
+python
+from dagster import repository
+from dagster_postgres import postgres_resource
+
+@repository
+def my_repository():
+    return [
+        my_postgres_asset,
+        # Define the postgres resource with the connection information
+        postgres_resource.configured({"username": "evno_user", "password": "!5Eur@36Vn0s", "hostname": "dev-evno-rds.ccsyy8ftbuta.us-east-1.rds.amazonaws.com", "db_name": "postgres"}),
+    ]
